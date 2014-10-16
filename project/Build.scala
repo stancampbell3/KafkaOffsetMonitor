@@ -21,7 +21,9 @@ object KafkaUtilsBuild extends Build {
     libraryDependencies ++= Seq(
       "log4j" % "log4j" % "1.2.17",
       "org.scalatest" %% "scalatest" % "1.9.1" % "test",
-      "org.apache.kafka" %% "kafka" % "0.8.1"))
+      "org.apache.kafka" %% "kafka" % "0.8.1",
+      "com.timgroup" % "java-statsd-client" % "3.0.1"
+    ))
 
   val slf4jVersion = "1.6.1"
 

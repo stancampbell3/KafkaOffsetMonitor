@@ -4,7 +4,7 @@ import java.util.{Timer, TimerTask}
 
 import scala.concurrent.duration._
 
-import com.quantifind.kafka.OffsetGetter.KafkaInfo
+import com.quantifind.kafka.OffsetGetter.{OffsetInfo, KafkaInfo}
 import com.quantifind.utils.UnfilteredWebApp
 import kafka.utils.{Logging, ZKStringSerializer}
 import net.liftweb.json.{CustomSerializer, NoTypeHints, Serialization}
@@ -17,8 +17,9 @@ import com.quantifind.kafka.OffsetGetter
 import com.quantifind.sumac.validation.Required
 import com.twitter.util.Time
 import net.liftweb.json.JsonAST.JInt
+import com.quantifind.statsd.StatsdWriter
 
-class OWArgs extends OffsetGetterArgs with UnfilteredWebApp.Arguments {
+class OWArgs extends OffsetGetterArgs with UnfilteredWebApp.Arguments with StatsdWriter.Arguments {
   @Required
   var retain: FiniteDuration = _
 
@@ -28,6 +29,13 @@ class OWArgs extends OffsetGetterArgs with UnfilteredWebApp.Arguments {
   var dbName: String = "offsetapp"
 
   lazy val db = new OffsetDB(dbName)
+
+  lazy val statsd:Option[StatsdWriter] = {
+    if (statsdEnabled)
+      Some(new StatsdWriter(statsdPrefix, statsdHost, statsdPort))
+    else
+      None
+  }
 }
 
 /**
@@ -46,7 +54,19 @@ object OffsetGetterWeb extends UnfilteredWebApp[OWArgs] with Logging {
       g =>
         val inf = getInfo(g, args).offsets.toIndexedSeq
         info(s"inserting ${inf.size}")
-        args.db.insetAll(inf)
+        args.db.insertAll(inf)
+        writeToStatsD(args, inf)
+    }
+  }
+
+  def writeToStatsD(args: OWArgs, inf:IndexedSeq[OffsetInfo]) {
+    if(args.statsd.isDefined) {
+      inf.foreach(offset => {
+        info("sending to statsd " + offset.group)
+        args.statsd.get.writeMetric(System.currentTimeMillis, offset)
+      })
+    } else {
+      info("statsd is disabled")
     }
   }
 

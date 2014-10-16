@@ -32,7 +32,6 @@ class OffsetGetterArgs extends FieldArgs {
 
   var zkSessionTimeout: Duration = 30 seconds
   var zkConnectionTimeout: Duration = 30 seconds
-
 }
 
 /**
